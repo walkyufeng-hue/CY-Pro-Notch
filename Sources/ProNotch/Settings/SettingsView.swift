@@ -442,14 +442,17 @@ struct SettingsView: View {
                 HStack {
                     Text("项目主页").font(.system(size: 13)).foregroundColor(.white.opacity(0.9))
                     Spacer()
-                    Link("github.com/DaliangPro/ProNotch",
-                         destination: URL(string: "https://github.com/DaliangPro/ProNotch")!)
+                    Link(UpdateChecker.repositoryDisplay,
+                         destination: UpdateChecker.repositoryURL)
                         .font(.system(size: 12))
                 }
                 .padding(.horizontal, 14).padding(.vertical, 11)
             }
             Text("把 MacBook 的刘海变成你的效率中心。")
-                .font(.system(size: 11)).foregroundColor(.white.opacity(0.35)).padding(.leading, 2)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.35))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 

@@ -366,16 +366,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     @objc private func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
         let credits = NSMutableAttributedString(
-            string: "作者：Daliang\n",
+            string: "作者：walkyufeng-hue\n",
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11),
                 .foregroundColor: NSColor.secondaryLabelColor,
             ])
         credits.append(NSAttributedString(
-            string: "github.com/DaliangPro/ProNotch",
+            string: UpdateChecker.repositoryDisplay,
             attributes: [
                 .font: NSFont.systemFont(ofSize: 11),
-                .link: URL(string: "https://github.com/DaliangPro/ProNotch")!,
+                .link: UpdateChecker.repositoryURL,
             ]))
         NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
     }

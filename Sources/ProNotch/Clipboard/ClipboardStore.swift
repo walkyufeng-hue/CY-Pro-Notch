@@ -120,7 +120,7 @@ final class ClipboardStore: ObservableObject {
                           date: Date().addingTimeInterval(-ago))
         }
         items = [
-            t("https://github.com/DaliangPro/ProNotch", 60),
+            t("https://github.com/walkyufeng-hue/CY-Pro-Notch", 60),
             t("struct NotchView: View {\n    var body: some View {\n        Text(\"ProNotch\")\n    }\n}", 300),
             t("把 MacBook 的刘海变成你的效率中心。", 900),
             t("Stay hungry, stay foolish.", 1800),

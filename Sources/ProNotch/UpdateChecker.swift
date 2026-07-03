@@ -15,7 +15,10 @@ final class UpdateChecker: ObservableObject {
     @Published private(set) var checkedUpToDate = false   // 检查过且已是最新（用于"已是最新版"提示）
 
     /// 仓库 owner/repo（发版时在此发 Release、打版本 tag）
-    private let repo = "DaliangPro/ProNotch"
+    static let repo = "walkyufeng-hue/CY-Pro-Notch"
+    static let repositoryDisplay = "github.com/walkyufeng-hue/CY-Pro-Notch"
+    static let repositoryURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch")!
+    static let releasesURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch/releases")!
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
@@ -28,7 +31,7 @@ final class UpdateChecker: ObservableObject {
         lastError = nil
         checkedUpToDate = false
         let current = currentVersion
-        let repo = self.repo
+        let repo = Self.repo
         Task { @MainActor in
             do {
                 let release = try await Self.fetchLatest(repo: repo)
@@ -55,6 +58,9 @@ final class UpdateChecker: ObservableObject {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            if http.statusCode == 404 {
+                return try await fetchLatestTag(repo: repo)
+            }
             throw NSError(domain: "ProNotch", code: http.statusCode,
                           userInfo: [NSLocalizedDescriptionKey:
                               "GitHub 返回 \(http.statusCode)（可能尚未发布 Release）"])
@@ -66,8 +72,32 @@ final class UpdateChecker: ObservableObject {
             throw NSError(domain: "ProNotch", code: -1,
                           userInfo: [NSLocalizedDescriptionKey: "解析 Release 信息失败"])
         }
-        let version = tag.hasPrefix("v") ? String(tag.dropFirst()) : tag
+        let version = normalizedVersion(tag)
         return Release(version: version, url: url)
+    }
+
+    private static func fetchLatestTag(repo: String) async throws -> Release {
+        var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(repo)/tags?per_page=1")!)
+        request.timeoutInterval = 15
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            throw NSError(domain: "ProNotch", code: http.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: "GitHub 返回 \(http.statusCode)"])
+        }
+        guard let tags = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let tag = tags.first?["name"] as? String else {
+            throw NSError(domain: "ProNotch", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "还没有可用于更新检查的版本标签"])
+        }
+        return Release(version: normalizedVersion(tag), url: Self.releasesURL)
+    }
+
+    private static func normalizedVersion(_ tag: String) -> String {
+        if tag.hasPrefix("v") || tag.hasPrefix("V") {
+            return String(tag.dropFirst())
+        }
+        return tag
     }
 
     /// 语义版本号比较：a 是否比 b 新（逐段比较数字，缺位补 0）
