@@ -470,7 +470,9 @@ struct SettingsView: View {
                 Text("检查失败").font(.system(size: 12)).foregroundColor(.red.opacity(0.8))
             }
             Button { updates.check() } label: {
-                Text("检查更新").font(.system(size: 12)).foregroundColor(.white.opacity(0.85))
+                Text(updates.checking ? "检查中…" : "检查更新")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(updates.checking ? 0.55 : 0.85))
                     .padding(.horizontal, 12).padding(.vertical, 4)
                     .background(RoundedRectangle(cornerRadius: 7, style: .continuous).fill(Color.white.opacity(0.12)))
             }

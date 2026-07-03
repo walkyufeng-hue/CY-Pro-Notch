@@ -19,6 +19,7 @@ final class UpdateChecker: ObservableObject {
     static let repositoryDisplay = "github.com/walkyufeng-hue/CY-Pro-Notch"
     static let repositoryURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch")!
     static let releasesURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch/releases")!
+    static let versionManifestURL = URL(string: "https://raw.githubusercontent.com/walkyufeng-hue/CY-Pro-Notch/main/version.json")!
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
@@ -27,6 +28,7 @@ final class UpdateChecker: ObservableObject {
     /// 检查一次；完成后回调最新可用版本（nil 表示已是最新或失败）。
     func check(completion: ((Release?) -> Void)? = nil) {
         guard !checking else { return }
+        available = nil
         checking = true
         lastError = nil
         checkedUpToDate = false
@@ -53,17 +55,18 @@ final class UpdateChecker: ObservableObject {
     }
 
     private static func fetchLatest(repo: String) async throws -> Release {
+        do {
+            return try await fetchVersionManifest()
+        } catch {
+            print("[ProNotch] version.json 检查失败，回退 GitHub API: \(error.localizedDescription)")
+        }
+
         var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(repo)/releases/latest")!)
         request.timeoutInterval = 15
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let (data, response) = try await URLSession.shared.data(for: request)
         if let http = response as? HTTPURLResponse, http.statusCode != 200 {
-            if http.statusCode == 404 {
-                return try await fetchLatestTag(repo: repo)
-            }
-            throw NSError(domain: "ProNotch", code: http.statusCode,
-                          userInfo: [NSLocalizedDescriptionKey:
-                              "GitHub 返回 \(http.statusCode)（可能尚未发布 Release）"])
+            return try await fetchLatestTag(repo: repo)
         }
         guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let tag = obj["tag_name"] as? String,
@@ -74,6 +77,25 @@ final class UpdateChecker: ObservableObject {
         }
         let version = normalizedVersion(tag)
         return Release(version: version, url: url)
+    }
+
+    private static func fetchVersionManifest() async throws -> Release {
+        var request = URLRequest(url: Self.versionManifestURL)
+        request.timeoutInterval = 10
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+            throw NSError(domain: "ProNotch", code: http.statusCode,
+                          userInfo: [NSLocalizedDescriptionKey: "版本文件返回 \(http.statusCode)"])
+        }
+        guard let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let version = obj["version"] as? String else {
+            throw NSError(domain: "ProNotch", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "版本文件格式不正确"])
+        }
+        let urlString = obj["url"] as? String
+        let url = urlString.flatMap(URL.init(string:)) ?? Self.releasesURL
+        return Release(version: normalizedVersion(version), url: url)
     }
 
     private static func fetchLatestTag(repo: String) async throws -> Release {
