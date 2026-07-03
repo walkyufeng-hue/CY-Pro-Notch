@@ -7,7 +7,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>CY Pro Notch</string>
 	<key>CFBundleExecutable</key>
-	<string>ProNotch</string>
+	<string>CY Pro Notch</string>
 	<key>CFBundleIconFile</key>
 	<string>AppIcon</string>
 	<key>CFBundleIdentifier</key>

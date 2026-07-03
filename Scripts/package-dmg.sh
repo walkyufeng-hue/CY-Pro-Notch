@@ -11,7 +11,7 @@ STAGING="build/dmg-staging"
 
 rm -rf "$STAGING" "$DMG"
 mkdir -p "$STAGING"
-cp -R build/ProNotch.app "$STAGING/"
+cp -R "build/CY Pro Notch.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
 hdiutil create -volname "CY Pro Notch V${VERSION}" -srcfolder "$STAGING" \
@@ -20,4 +20,4 @@ rm -rf "$STAGING"
 
 echo "已生成: $DMG"
 echo "提醒: 未签名分发，用户首次打开需右键 → 打开，或执行:"
-echo "  xattr -dr com.apple.quarantine /Applications/ProNotch.app"
+echo "  xattr -dr com.apple.quarantine '/Applications/CY Pro Notch.app'"

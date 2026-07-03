@@ -43,7 +43,7 @@
 
 ```bash
 ./Scripts/install.sh            # 构建并安装到 /Applications（旧版进废纸篓）
-./Scripts/build-app.sh          # 只构建不安装，产物在 build/ProNotch.app
+./Scripts/build-app.sh          # 只构建不安装，产物在 build/CY Pro Notch.app
 ./Scripts/package-dmg.sh        # 通用二进制（arm64 + x86_64）+ 分发 DMG
 ```
 
