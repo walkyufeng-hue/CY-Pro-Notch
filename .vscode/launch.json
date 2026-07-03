@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ProNotch-main}",
+            "name": "Debug ProNotch",
+            "target": "ProNotch",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ProNotch"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ProNotch-main}",
+            "name": "Release ProNotch",
+            "target": "ProNotch",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ProNotch"
+        }
+    ]
+}
