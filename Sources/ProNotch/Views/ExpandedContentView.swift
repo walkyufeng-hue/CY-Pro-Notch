@@ -22,8 +22,8 @@ struct ExpandedContentView: View {
             HStack(spacing: 0) {
                 HStack(spacing: 6) {
                     StripButton(icon: quickActions.caffeinateActive
-                                    ? "cup.and.saucer.fill"
-                                    : "cup.and.saucer",
+                                    ? "eye.fill"
+                                    : "eye",
                                 active: quickActions.caffeinateActive,
                                 help: quickActions.caffeinateActive
                                     ? "防休眠已开启（点击关闭）"
