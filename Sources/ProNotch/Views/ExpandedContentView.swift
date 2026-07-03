@@ -46,6 +46,7 @@ struct ExpandedContentView: View {
                     AgentReminderToggle()
                 }
                 .frame(maxWidth: .infinity)
+                .offset(y: 10)
             }
             .frame(height: vm.notchRect.height)
             .padding(.horizontal, edgeInset)
