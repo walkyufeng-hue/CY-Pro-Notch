@@ -2,6 +2,11 @@ import AppKit
 import SwiftUI
 import UserNotifications
 
+private final class UpdateCheckPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var windowControllers: [NotchWindowController] = []
@@ -12,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private let updateChecker = UpdateChecker()
     private var updateMenuItem: NSMenuItem?
     private var updateSeparator: NSMenuItem?
+    private var updateAlertWindow: NSWindow?
     /// 剪贴板切换器全局快捷键
     private let clipboardHotKey = GlobalHotKey(id: 2)
 
@@ -537,44 +543,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     private func showUpdateAvailableAlert(_ release: UpdateChecker.Release) {
-        let alert = NSAlert()
-        NSApp.activate(ignoringOtherApps: true)
-        alert.messageText = "发现新版本 V\(release.version)"
-        alert.informativeText = """
-        CY Pro Notch 可以更新。
-
-        软件更新：\(UpdateChecker.repositoryDisplay)
-        """
-        alert.addButton(withTitle: "前往下载")
-        alert.addButton(withTitle: "稍后")
-        if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(release.url)
-        }
+        showUpdateCheckAlert(
+            title: "发现新版本 V\(release.version)",
+            message: "点击下方 GitHub 链接查看更新。",
+            linkDestination: UpdateChecker.repositoryURL
+        )
     }
 
     private func showManualUpdateResultAlert() {
-        let alert = NSAlert()
-        NSApp.activate(ignoringOtherApps: true)
         if let err = updateChecker.lastError {
-            alert.messageText = "检查更新失败"
-            alert.informativeText = """
-            \(err)
-
-            软件更新：\(UpdateChecker.repositoryDisplay)
-            """
+            print("[ProNotch] 检查更新失败: \(err)")
+            showUpdateCheckAlert(
+                title: "软件更新",
+                message: nil,
+                linkDestination: UpdateChecker.repositoryURL
+            )
         } else {
-            alert.messageText = "已是最新版本"
-            alert.informativeText = """
-            当前版本 V\(updateChecker.currentVersion) 已是最新。
+            showUpdateCheckAlert(
+                title: "已是最新版本",
+                message: "当前版本 V\(updateChecker.currentVersion) 已是最新。",
+                linkDestination: UpdateChecker.repositoryURL
+            )
+        }
+    }
 
-            软件更新：\(UpdateChecker.repositoryDisplay)
-            """
-        }
-        alert.addButton(withTitle: "打开软件更新")
-        alert.addButton(withTitle: "好")
-        if alert.runModal() == .alertFirstButtonReturn {
-            NSWorkspace.shared.open(UpdateChecker.releasesURL)
-        }
+    private func showUpdateCheckAlert(title: String, message: String?, linkDestination: URL) {
+        NSApp.activate(ignoringOtherApps: true)
+        updateAlertWindow?.close()
+
+        let height: CGFloat = message == nil ? 292 : 336
+        let panel = UpdateCheckPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: height),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.hasShadow = true
+        panel.level = .modalPanel
+        panel.isReleasedWhenClosed = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+
+        panel.contentViewController = NSHostingController(
+            rootView: UpdateCheckAlertView(
+                title: title,
+                message: message,
+                linkDestination: linkDestination
+            ) { [weak self, weak panel] in
+                panel?.close()
+                self?.updateAlertWindow = nil
+            }
+        )
+        updateAlertWindow = panel
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
     }
 
     private func refreshUpdateMenuItem() {
