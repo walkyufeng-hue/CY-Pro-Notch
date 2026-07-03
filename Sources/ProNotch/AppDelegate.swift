@@ -526,19 +526,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private func handleUpdate(_ release: UpdateChecker.Release?, manual: Bool) {
         refreshUpdateMenuItem()
         if let release {
-            notifyUpdate(release)
-        } else if manual {
-            let alert = NSAlert()
-            NSApp.activate(ignoringOtherApps: true)
-            if let err = updateChecker.lastError {
-                alert.messageText = "检查更新失败"
-                alert.informativeText = err
+            if manual {
+                showUpdateAvailableAlert(release)
             } else {
-                alert.messageText = "已是最新版本"
-                alert.informativeText = "当前 \(updateChecker.currentVersion) 已是最新。"
+                notifyUpdate(release)
             }
-            alert.addButton(withTitle: "好")
-            alert.runModal()
+        } else if manual {
+            showManualUpdateResultAlert()
+        }
+    }
+
+    private func showUpdateAvailableAlert(_ release: UpdateChecker.Release) {
+        let alert = NSAlert()
+        NSApp.activate(ignoringOtherApps: true)
+        alert.messageText = "发现新版本 V\(release.version)"
+        alert.informativeText = """
+        CY Pro Notch 可以更新。
+
+        软件更新：\(UpdateChecker.repositoryDisplay)
+        """
+        alert.addButton(withTitle: "前往下载")
+        alert.addButton(withTitle: "稍后")
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(release.url)
+        }
+    }
+
+    private func showManualUpdateResultAlert() {
+        let alert = NSAlert()
+        NSApp.activate(ignoringOtherApps: true)
+        if let err = updateChecker.lastError {
+            alert.messageText = "检查更新失败"
+            alert.informativeText = """
+            \(err)
+
+            软件更新：\(UpdateChecker.repositoryDisplay)
+            """
+        } else {
+            alert.messageText = "已是最新版本"
+            alert.informativeText = """
+            当前版本 V\(updateChecker.currentVersion) 已是最新。
+
+            软件更新：\(UpdateChecker.repositoryDisplay)
+            """
+        }
+        alert.addButton(withTitle: "打开软件更新")
+        alert.addButton(withTitle: "好")
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(UpdateChecker.releasesURL)
         }
     }
 
