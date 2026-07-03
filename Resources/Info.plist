@@ -42,7 +42,5 @@
 	</dict>
 	<key>NSHighResolutionCapable</key>
 	<true/>
-	<key>NSHumanReadableCopyright</key>
-	<string>© 2026 Daliang · MIT License</string>
 </dict>
 </plist>

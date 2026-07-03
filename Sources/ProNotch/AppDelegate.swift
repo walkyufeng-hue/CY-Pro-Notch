@@ -2,11 +2,6 @@ import AppKit
 import SwiftUI
 import UserNotifications
 
-private final class UpdateCheckPanel: NSPanel {
-    override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { true }
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var windowControllers: [NotchWindowController] = []
@@ -17,7 +12,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private let updateChecker = UpdateChecker()
     private var updateMenuItem: NSMenuItem?
     private var updateSeparator: NSMenuItem?
-    private var updateAlertWindow: NSWindow?
     /// 剪贴板切换器全局快捷键
     private let clipboardHotKey = GlobalHotKey(id: 2)
 
@@ -62,7 +56,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // 启动时静默检查更新：发现新版才提醒（不打扰）
         UNUserNotificationCenter.current().delegate = self
         updateChecker.check { [weak self] release in
-            self?.handleUpdate(release, manual: false)
+            self?.handleUpdate(release)
         }
 
         // 光晕提醒：常驻一个覆盖整屏的光晕层（默认不显示，等 pronotch:// 信号点亮）
@@ -367,10 +361,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         settingsWindow.show(settings: settingsStore, chatStore: chatStore, glow: glowController, updates: updateChecker)
     }
 
-    /// 系统标准关于面板：图标、名称、版本来自 Info.plist，
-    /// 署名与可点击的 GitHub 链接放在 credits 区
+    /// 系统标准关于面板：名称、版本来自 Info.plist，
+    /// 图标、署名与可点击的 GitHub 链接放在 options 区
     @objc private func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
+        let icon = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: "Apple")?
+            .withSymbolConfiguration(.init(pointSize: 72, weight: .regular))
+            ?? NSImage()
         let credits = NSMutableAttributedString(
             string: "作者：walkyufeng-hue\n",
             attributes: [
@@ -383,7 +380,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 .font: NSFont.systemFont(ofSize: 11),
                 .link: UpdateChecker.repositoryURL,
             ]))
-        NSApp.orderFrontStandardAboutPanel(options: [.credits: credits])
+        NSApp.orderFrontStandardAboutPanel(options: [
+            .applicationIcon: icon,
+            .credits: credits,
+        ])
     }
 
     @objc private func screenParametersChanged() {
@@ -506,11 +506,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         aboutItem.target = self
         aboutItem.image = emptyImage
         menu.addItem(aboutItem)
-        let checkUpdateItem = NSMenuItem(title: "检查更新…",
-                                         action: #selector(checkForUpdatesManually), keyEquivalent: "")
-        checkUpdateItem.target = self
-        checkUpdateItem.image = emptyImage
-        menu.addItem(checkUpdateItem)
         menu.addItem(.separator())
         let quitItem = NSMenuItem(title: "退出 CY Pro Notch",
                                   action: #selector(NSApplication.terminate(_:)),
@@ -523,81 +518,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     // MARK: - 检查更新
 
-    @objc private func checkForUpdatesManually() {
-        updateChecker.check { [weak self] release in
-            self?.handleUpdate(release, manual: true)
-        }
-    }
-
-    private func handleUpdate(_ release: UpdateChecker.Release?, manual: Bool) {
+    private func handleUpdate(_ release: UpdateChecker.Release?) {
         refreshUpdateMenuItem()
         if let release {
-            if manual {
-                showUpdateAvailableAlert(release)
-            } else {
-                notifyUpdate(release)
-            }
-        } else if manual {
-            showManualUpdateResultAlert()
+            notifyUpdate(release)
         }
-    }
-
-    private func showUpdateAvailableAlert(_ release: UpdateChecker.Release) {
-        showUpdateCheckAlert(
-            title: "发现新版本 V\(release.version)",
-            message: "点击下方 GitHub 链接查看更新。",
-            linkDestination: UpdateChecker.repositoryURL
-        )
-    }
-
-    private func showManualUpdateResultAlert() {
-        if let err = updateChecker.lastError {
-            print("[ProNotch] 检查更新失败: \(err)")
-            showUpdateCheckAlert(
-                title: "软件更新",
-                message: nil,
-                linkDestination: UpdateChecker.repositoryURL
-            )
-        } else {
-            showUpdateCheckAlert(
-                title: "已是最新版本",
-                message: "当前版本 V\(updateChecker.currentVersion) 已是最新。",
-                linkDestination: UpdateChecker.repositoryURL
-            )
-        }
-    }
-
-    private func showUpdateCheckAlert(title: String, message: String?, linkDestination: URL) {
-        NSApp.activate(ignoringOtherApps: true)
-        updateAlertWindow?.close()
-
-        let height: CGFloat = message == nil ? 292 : 336
-        let panel = UpdateCheckPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: height),
-            styleMask: [.borderless],
-            backing: .buffered,
-            defer: false
-        )
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.level = .modalPanel
-        panel.isReleasedWhenClosed = false
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-
-        panel.contentViewController = NSHostingController(
-            rootView: UpdateCheckAlertView(
-                title: title,
-                message: message,
-                linkDestination: linkDestination
-            ) { [weak self, weak panel] in
-                panel?.close()
-                self?.updateAlertWindow = nil
-            }
-        )
-        updateAlertWindow = panel
-        panel.center()
-        panel.makeKeyAndOrderFront(nil)
     }
 
     private func refreshUpdateMenuItem() {
