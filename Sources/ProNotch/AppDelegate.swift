@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     private let updateChecker = UpdateChecker()
     private var updateMenuItem: NSMenuItem?
     private var updateSeparator: NSMenuItem?
+    private var aboutWindow: NSWindow?
     /// 剪贴板切换器全局快捷键
     private let clipboardHotKey = GlobalHotKey(id: 2)
 
@@ -361,30 +362,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         settingsWindow.show(settings: settingsStore, chatStore: chatStore, glow: glowController, updates: updateChecker)
     }
 
-    /// 系统标准关于面板：隐藏版本号，只保留图标、名称、作者与 GitHub 链接。
+    /// 自定义关于面板：隐藏版本号，只保留图标、名称、作者与 GitHub 链接。
     @objc private func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
-        let icon = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: "Apple")?
-            .withSymbolConfiguration(.init(pointSize: 72, weight: .regular))
-            ?? NSImage()
-        let credits = NSMutableAttributedString(
-            string: "作者：walkyufeng-hue\n",
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
-                .foregroundColor: NSColor.secondaryLabelColor,
-            ])
-        credits.append(NSAttributedString(
-            string: UpdateChecker.repositoryDisplay,
-            attributes: [
-                .font: NSFont.systemFont(ofSize: 11),
-                .link: UpdateChecker.repositoryURL,
-            ]))
-        NSApp.orderFrontStandardAboutPanel(options: [
-            .applicationIcon: icon,
-            .applicationVersion: "",
-            .version: "",
-            .credits: credits,
-        ])
+
+        if let aboutWindow {
+            aboutWindow.center()
+            aboutWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 570, height: 405),
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false)
+        window.title = "关于 CY Pro Notch"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .white
+        window.contentView = NSHostingView(rootView: AboutPanelView())
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        aboutWindow = window
     }
 
     @objc private func screenParametersChanged() {
@@ -573,5 +575,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             }
         }
         completionHandler()
+    }
+}
+
+private struct AboutPanelView: View {
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 70)
+
+            Image(systemName: "apple.logo")
+                .font(.system(size: 102, weight: .regular))
+                .foregroundStyle(.gray)
+
+            Text("CY Pro Notch")
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(.primary)
+                .padding(.top, 14)
+
+            VStack(spacing: 4) {
+                HStack(spacing: 4) {
+                    Text("作者：")
+                    Text("walkyufeng-hue")
+                }
+                .foregroundStyle(.secondary)
+
+                Link(UpdateChecker.repositoryDisplay, destination: UpdateChecker.repositoryURL)
+                    .foregroundStyle(.blue)
+            }
+            .font(.system(size: 19, weight: .regular))
+            .padding(.top, 32)
+
+            Spacer(minLength: 0)
+        }
+        .frame(width: 570, height: 405)
+        .background(Color.white)
     }
 }
