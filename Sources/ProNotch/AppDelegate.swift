@@ -377,7 +377,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
-        window.title = "关于 CY Pro Notch"
+        window.title = "关于 Volcano Assistant"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         window.isMovableByWindowBackground = true
@@ -504,13 +504,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         settingsItem.image = emptyImage
         menu.addItem(settingsItem)
         menu.addItem(.separator())
-        let aboutItem = NSMenuItem(title: "关于 CY Pro Notch",
+        let aboutItem = NSMenuItem(title: "关于 Volcano Assistant",
                                    action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         aboutItem.image = emptyImage
         menu.addItem(aboutItem)
         menu.addItem(.separator())
-        let quitItem = NSMenuItem(title: "退出 CY Pro Notch",
+        let quitItem = NSMenuItem(title: "退出 Volcano Assistant",
                                   action: #selector(NSApplication.terminate(_:)),
                                   keyEquivalent: "q")
         quitItem.image = emptyImage
@@ -550,7 +550,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
-            content.title = "CY Pro Notch 有新版本"
+            content.title = "Volcano Assistant 有新版本"
             content.body = "\(release.version) 可更新，点击前往下载。"
             content.userInfo = ["url": release.url.absoluteString]
             let request = UNNotificationRequest(
@@ -587,7 +587,7 @@ private struct AboutPanelView: View {
                 .font(.system(size: 58, weight: .regular))
                 .foregroundStyle(.gray)
 
-            Text("CY Pro Notch")
+            Text("Volcano Assistant")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.top, 9)

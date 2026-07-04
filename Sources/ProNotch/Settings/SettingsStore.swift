@@ -171,7 +171,7 @@ final class SettingsStore: ObservableObject {
             }
             let status = Self.serviceStatus
             loginItemHint = status == .requiresApproval
-                ? "需要在 系统设置 → 通用 → 登录项 中允许 CY Pro Notch"
+                ? "需要在 系统设置 → 通用 → 登录项 中允许 Volcano Assistant"
                 : nil
             print("[ProNotch] 开机自启\(launchAtLogin ? "开启" : "关闭")，登录项状态: \(status.rawValue)")
         } catch {

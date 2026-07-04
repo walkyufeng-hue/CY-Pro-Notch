@@ -431,7 +431,7 @@ struct SettingsView: View {
             pageTitle("关于")
             SettingsCard {
                 HStack {
-                    Text("CY Pro Notch").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                    Text("Volcano Assistant").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
                     Spacer()
                 }
                 .padding(.horizontal, 14).padding(.vertical, 11)

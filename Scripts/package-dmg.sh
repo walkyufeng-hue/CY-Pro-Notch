@@ -6,18 +6,18 @@ cd "$(dirname "$0")/.."
 ./Scripts/build-app.sh release universal
 
 VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" Resources/Info.plist)
-DMG="build/CY-Pro-Notch-${VERSION}.dmg"
+DMG="build/Volcano-Assistant-${VERSION}.dmg"
 STAGING="build/dmg-staging"
 
 rm -rf "$STAGING" "$DMG"
 mkdir -p "$STAGING"
-cp -R "build/CY Pro Notch.app" "$STAGING/"
+cp -R "build/Volcano Assistant.app" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
-hdiutil create -volname "CY Pro Notch V${VERSION}" -srcfolder "$STAGING" \
+hdiutil create -volname "Volcano Assistant V${VERSION}" -srcfolder "$STAGING" \
     -ov -format UDZO "$DMG" >/dev/null
 rm -rf "$STAGING"
 
 echo "已生成: $DMG"
 echo "提醒: 未签名分发，用户首次打开需右键 → 打开，或执行:"
-echo "  xattr -dr com.apple.quarantine '/Applications/CY Pro Notch.app'"
+echo "  xattr -dr com.apple.quarantine '/Applications/Volcano Assistant.app'"

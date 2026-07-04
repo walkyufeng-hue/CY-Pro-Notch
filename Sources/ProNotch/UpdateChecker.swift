@@ -15,11 +15,11 @@ final class UpdateChecker: ObservableObject {
     @Published private(set) var checkedUpToDate = false   // 检查过且已是最新（用于"已是最新版"提示）
 
     /// 仓库 owner/repo（发版时在此发 Release、打版本 tag）
-    static let repo = "walkyufeng-hue/CY-Pro-Notch"
-    static let repositoryDisplay = "github.com/walkyufeng-hue/CY-Pro-Notch"
-    static let repositoryURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch")!
-    static let releasesURL = URL(string: "https://github.com/walkyufeng-hue/CY-Pro-Notch/releases")!
-    static let versionManifestURL = URL(string: "https://raw.githubusercontent.com/walkyufeng-hue/CY-Pro-Notch/main/version.json")!
+    static let repo = "walkyufeng-hue/Volcano-Assistant"
+    static let repositoryDisplay = "github.com/walkyufeng-hue/Volcano-Assistant"
+    static let repositoryURL = URL(string: "https://github.com/walkyufeng-hue/Volcano-Assistant")!
+    static let releasesURL = URL(string: "https://github.com/walkyufeng-hue/Volcano-Assistant/releases")!
+    static let versionManifestURL = URL(string: "https://raw.githubusercontent.com/walkyufeng-hue/Volcano-Assistant/main/version.json")!
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"

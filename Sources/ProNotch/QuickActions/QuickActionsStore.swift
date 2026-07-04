@@ -132,7 +132,7 @@ final class QuickActionsStore: ObservableObject {
         }
     }
 
-    /// 打开 CY Pro Notch 自己的设置窗口（窗口由 AppDelegate 持有，走通知解耦）
+    /// 打开 Volcano Assistant 自己的设置窗口（窗口由 AppDelegate 持有，走通知解耦）
     func openAppSettings() {
         NotificationCenter.default.post(
             name: NSNotification.Name("ProNotchOpenSettings"), object: nil)

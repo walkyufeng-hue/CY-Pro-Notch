@@ -1,4 +1,4 @@
-# CY Pro Notch
+# Volcano Assistant
 
 把 MacBook 的刘海变成你的效率中心：鼠标悬停刘海，自动展开一块面板——App 快捷启动、剪贴板历史、AI 问答、灵感闪记，移开鼠标自动收回，不占 Dock、不抢焦点。
 
@@ -43,7 +43,7 @@
 
 ```bash
 ./Scripts/install.sh            # 构建并安装到 /Applications（旧版进废纸篓）
-./Scripts/build-app.sh          # 只构建不安装，产物在 build/CY Pro Notch.app
+./Scripts/build-app.sh          # 只构建不安装，产物在 build/Volcano Assistant.app
 ./Scripts/package-dmg.sh        # 通用二进制（arm64 + x86_64）+ 分发 DMG
 ```
 

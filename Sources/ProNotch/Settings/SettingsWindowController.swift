@@ -15,7 +15,7 @@ final class SettingsWindowController {
                 .environmentObject(updates)
             let hosting = NSHostingController(rootView: root)
             let newWindow = NSWindow(contentViewController: hosting)
-            newWindow.title = "CY Pro Notch 设置"
+            newWindow.title = "Volcano Assistant 设置"
             newWindow.titleVisibility = .hidden
             newWindow.styleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
             // 深色半透明风格：透明标题栏 + 毛玻璃背景由内容视图提供

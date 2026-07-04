@@ -1,5 +1,5 @@
 #!/bin/bash
-# 构建 CY Pro Notch.app：纯 SwiftPM 编译 + 手工封装 bundle（不依赖 Xcode 工程）
+# 构建 Volcano Assistant.app：纯 SwiftPM 编译 + 手工封装 bundle（不依赖 Xcode 工程）
 # 用法: build-app.sh [debug|release] [universal]
 #   第二个参数传 universal 时构建 Intel + Apple Silicon 通用二进制（用于分发）
 set -euo pipefail
@@ -18,11 +18,11 @@ else
     BIN=".build/$CONFIG/ProNotch"
 fi
 
-APP_DIR="build/CY Pro Notch.app"
+APP_DIR="build/Volcano Assistant.app"
 rm -rf "$APP_DIR"
 mkdir -p "$APP_DIR/Contents/MacOS" "$APP_DIR/Contents/Resources"
-cp "$BIN" "$APP_DIR/Contents/MacOS/CY Pro Notch"
+cp "$BIN" "$APP_DIR/Contents/MacOS/Volcano Assistant"
 cp Resources/Info.plist "$APP_DIR/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP_DIR/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$APP_DIR" >/dev/null 2>&1 || echo "提示: 临时签名失败，不影响本机运行"
-echo "已生成: ${APP_DIR} ($(lipo -archs "${APP_DIR}/Contents/MacOS/CY Pro Notch" 2>/dev/null || echo 未知架构))"
+echo "已生成: ${APP_DIR} ($(lipo -archs "${APP_DIR}/Contents/MacOS/Volcano Assistant" 2>/dev/null || echo 未知架构))"
