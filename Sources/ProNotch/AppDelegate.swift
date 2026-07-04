@@ -361,8 +361,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         settingsWindow.show(settings: settingsStore, chatStore: chatStore, glow: glowController, updates: updateChecker)
     }
 
-    /// 系统标准关于面板：名称、版本来自 Info.plist，
-    /// 图标、署名与可点击的 GitHub 链接放在 options 区
+    /// 系统标准关于面板：隐藏版本号，只保留图标、名称、作者与 GitHub 链接。
     @objc private func showAbout() {
         NSApp.activate(ignoringOtherApps: true)
         let icon = NSImage(systemSymbolName: "apple.logo", accessibilityDescription: "Apple")?
@@ -382,6 +381,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             ]))
         NSApp.orderFrontStandardAboutPanel(options: [
             .applicationIcon: icon,
+            .applicationVersion: "",
+            .version: "",
             .credits: credits,
         ])
     }

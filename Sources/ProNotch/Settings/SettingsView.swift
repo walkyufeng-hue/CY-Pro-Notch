@@ -433,7 +433,6 @@ struct SettingsView: View {
                 HStack {
                     Text("CY Pro Notch").font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
                     Spacer()
-                    Text("版本 V\(updates.currentVersion)").font(.system(size: 12)).foregroundColor(.white.opacity(0.5))
                 }
                 .padding(.horizontal, 14).padding(.vertical, 11)
                 CardDivider()
