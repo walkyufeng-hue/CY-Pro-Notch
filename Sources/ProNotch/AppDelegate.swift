@@ -373,7 +373,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 570, height: 405),
+            contentRect: NSRect(x: 0, y: 0, width: 285, height: 205),
             styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false)
@@ -581,18 +581,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 private struct AboutPanelView: View {
     var body: some View {
         VStack(spacing: 0) {
-            Spacer().frame(height: 70)
+            Spacer().frame(height: 36)
 
             Image(systemName: "apple.logo")
-                .font(.system(size: 102, weight: .regular))
+                .font(.system(size: 58, weight: .regular))
                 .foregroundStyle(.gray)
 
             Text("CY Pro Notch")
-                .font(.system(size: 25, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.primary)
-                .padding(.top, 14)
+                .padding(.top, 9)
 
-            VStack(spacing: 4) {
+            VStack(spacing: 2) {
                 HStack(spacing: 4) {
                     Text("作者：")
                     Text("walkyufeng-hue")
@@ -602,12 +602,12 @@ private struct AboutPanelView: View {
                 Link(UpdateChecker.repositoryDisplay, destination: UpdateChecker.repositoryURL)
                     .foregroundStyle(.blue)
             }
-            .font(.system(size: 19, weight: .regular))
-            .padding(.top, 32)
+            .font(.system(size: 11.5, weight: .regular))
+            .padding(.top, 18)
 
             Spacer(minLength: 0)
         }
-        .frame(width: 570, height: 405)
+        .frame(width: 285, height: 205)
         .background(Color.white)
     }
 }
