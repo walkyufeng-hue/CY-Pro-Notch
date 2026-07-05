@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// 光晕来源：Claude Code（橙）/ Codex（蓝）/ VS Code（青）。各自对应一个桌面 App，
+/// 光晕来源：Claude Code（橙）/ Codex（紫）/ VS Code（蓝）。各自对应一个桌面 App，
 /// 当该 App 被切到最前台时，熄灭它的「完成提醒」光晕。
 enum GlowSource: String {
     case claude

@@ -329,7 +329,7 @@ private struct StripToggle: View {
     }
 }
 
-/// 面板右侧「Agent 提醒」总开关：橙(Claude)→蓝(Codex)双色描边胶囊。
+/// 面板右侧「Agent 提醒」总开关：用 Claude / Codex / VS Code 三种光晕色描边。
 /// 点亮 = 开启 Agent 完成光晕；熄灭 = 全局静音（关闭时正亮着的光晕也会随之
 /// 熄灭——由 GlowController 监听 glowEnabled 变更统一处理）。
 private struct AgentReminderToggle: View {

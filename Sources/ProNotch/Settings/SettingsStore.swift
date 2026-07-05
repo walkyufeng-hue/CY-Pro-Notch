@@ -121,9 +121,9 @@ final class SettingsStore: ObservableObject {
             "clipboardLimit": 200,
             "captureInboxPath": "~/Documents/妙记.md",
             "glowEnabled": true,
-            "glowClaudeColorHex": "#FF8A00",
-            "glowCodexColorHex": "#0A84FF",
-            "glowVSCodeColorHex": "#007ACC",
+            "glowClaudeColorHex": Self.defaultClaudeGlowColorHex,
+            "glowCodexColorHex": Self.defaultCodexGlowColorHex,
+            "glowVSCodeColorHex": Self.defaultVSCodeGlowColorHex,
             "glowBreathPeriod": 3.2,
             "glowIntensity": 0.9,
             "glowThickness": 90.0,
@@ -135,9 +135,25 @@ final class SettingsStore: ObservableObject {
         captureInboxPath = UserDefaults.standard.string(forKey: "captureInboxPath")
             ?? "~/Documents/妙记.md"
         glowEnabled = UserDefaults.standard.bool(forKey: "glowEnabled")
-        glowClaudeColorHex = UserDefaults.standard.string(forKey: "glowClaudeColorHex") ?? "#FF8A00"
-        glowCodexColorHex = UserDefaults.standard.string(forKey: "glowCodexColorHex") ?? "#0A84FF"
-        glowVSCodeColorHex = UserDefaults.standard.string(forKey: "glowVSCodeColorHex") ?? "#007ACC"
+        glowClaudeColorHex = UserDefaults.standard.string(forKey: "glowClaudeColorHex")
+            ?? Self.defaultClaudeGlowColorHex
+        let savedCodexColor = UserDefaults.standard.string(forKey: "glowCodexColorHex")
+            ?? Self.defaultCodexGlowColorHex
+        glowCodexColorHex = savedCodexColor.uppercased() == "#0A84FF"
+            ? Self.defaultCodexGlowColorHex
+            : savedCodexColor
+        if savedCodexColor.uppercased() == "#0A84FF" {
+            UserDefaults.standard.set(Self.defaultCodexGlowColorHex, forKey: "glowCodexColorHex")
+        }
+        let savedVSCodeColor = UserDefaults.standard.string(forKey: "glowVSCodeColorHex")
+            ?? Self.defaultVSCodeGlowColorHex
+        // 早期把 VS Code 误设成绿色；这里迁移回 VS Code 官方蓝，避免旧值覆盖默认色。
+        glowVSCodeColorHex = savedVSCodeColor.uppercased() == "#00CB79"
+            ? Self.defaultVSCodeGlowColorHex
+            : savedVSCodeColor
+        if savedVSCodeColor.uppercased() == "#00CB79" {
+            UserDefaults.standard.set(Self.defaultVSCodeGlowColorHex, forKey: "glowVSCodeColorHex")
+        }
         glowBreathPeriod = UserDefaults.standard.double(forKey: "glowBreathPeriod")
         glowIntensity = UserDefaults.standard.double(forKey: "glowIntensity")
         glowThickness = UserDefaults.standard.double(forKey: "glowThickness")
@@ -161,6 +177,10 @@ final class SettingsStore: ObservableObject {
             UserDefaults.standard.set(true, forKey: "clipboardShortcutInitialized")
         }
     }
+
+    private static let defaultClaudeGlowColorHex = "#FD9000"
+    private static let defaultCodexGlowColorHex = "#9977FE"
+    private static let defaultVSCodeGlowColorHex = "#007ACC"
 
     private func applyLaunchAtLogin() {
         do {
