@@ -8,6 +8,17 @@ enum GlowSource: String {
     case codex
     case vscode
 
+    /// VS Code 系列宿主：Codex / Claude 运行在这些编辑器里时，视觉上按 VS Code 颜色提醒。
+    static let vscodeHostBundleIDs: Set<String> = [
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.visualstudio.code.oss",
+        "com.vscodium",
+        "com.cursor.Cursor",
+        "com.todesktop.230313mzl4w4u92",
+        "com.exafunction.windsurf",
+    ]
+
     /// 对应桌面 App 的 bundle id（「切到前台就熄灭」识别用）
     var appBundleID: String {
         switch self {
@@ -105,11 +116,18 @@ final class GlowController: ObservableObject {
         // 只在 Agent 处于后台时提醒：若宿主 App 已在最前台（你正盯着它跑），就不点亮——
         // 既没必要，光晕也无从熄灭（已在前台，等不到「切回它」的激活事件）。
         if NSWorkspace.shared.frontmostApplication?.bundleIdentifier == hostID { return }
+        let visualSource = Self.visualSource(for: source, hostID: hostID)
         previewingSource = nil
         testingSource = nil
         activeHost = hostID
         // 完成信号发在「这轮任务真正结束」时，所以收到即点亮。
-        light(source, mode: .alert)
+        // 颜色按宿主 App 优先：例如 Codex 在 VS Code 里跑，视觉上归到 VS Code 蓝。
+        print("[ProNotch] Agent 完成提醒: source=\(source.rawValue), host=\(hostID), visual=\(visualSource.rawValue)")
+        light(visualSource, mode: .alert)
+    }
+
+    private static func visualSource(for source: GlowSource, hostID: String) -> GlowSource {
+        GlowSource.vscodeHostBundleIDs.contains(hostID) ? .vscode : source
     }
 
     /// 设置页「测试」按钮：模拟一次真实完成（切前台会灭），再点同色熄灭
