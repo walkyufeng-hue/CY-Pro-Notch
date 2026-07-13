@@ -336,14 +336,13 @@ private struct AgentReminderToggle: View {
     @EnvironmentObject var settings: SettingsStore
 
     @State private var hovering = false
-    @State private var breathing = false
 
     private var on: Bool { settings.glowEnabled }
 
-    /// 开启时描边在 0.45↔1 之间呼吸；关闭时恒定（灰描边不呼吸）
+    /// 开启时保留彩色描边，但不常态呼吸，避免在编辑器里形成持续闪烁感。
     private var strokeOpacity: Double {
         guard on else { return 1 }
-        return breathing ? 1 : 0.45
+        return hovering ? 1 : 0.72
     }
 
     var body: some View {
@@ -360,14 +359,12 @@ private struct AgentReminderToggle: View {
                     Capsule()
                         .strokeBorder(borderStyle, lineWidth: 1.5)
                         .opacity(strokeOpacity)
-                        .animation(.easeInOut(duration: max(settings.glowBreathPeriod, 0.6) / 2)
-                            .repeatForever(autoreverses: true), value: breathing)
+                        .animation(.easeInOut(duration: 0.16), value: hovering)
                 )
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .onAppear { breathing = true }
         .help(on ? "Agent 完成提醒：开启（点击全局静音屏幕光晕）"
                  : "Agent 完成提醒：已静音（点击恢复）")
     }

@@ -59,6 +59,9 @@ final class GlowController: ObservableObject {
     private var loopStart: Date?
     private var fadeTarget: Double = 0
     private let fadeDuration: Double = 0.5
+    private var lastAlertSignature: String?
+    private var lastAlertAt: Date?
+    private let duplicateAlertInterval: TimeInterval = 1.2
 
     init(settings: SettingsStore) {
         self.settings = settings
@@ -117,11 +120,24 @@ final class GlowController: ObservableObject {
         // 既没必要，光晕也无从熄灭（已在前台，等不到「切回它」的激活事件）。
         if NSWorkspace.shared.frontmostApplication?.bundleIdentifier == hostID { return }
         let visualSource = Self.visualSource(for: source, hostID: hostID)
+        // 完成信号发在「这轮任务真正结束」时，所以收到即点亮。
+        // 颜色按宿主 App 优先：例如 Codex 在 VS Code 里跑，视觉上归到 VS Code 蓝。
+        let signature = "\(visualSource.rawValue)|\(hostID)"
+        let now = Date()
+        if activeMode == .alert, activeHost == hostID, activeSource == visualSource {
+            fadeTarget = 1
+            return
+        }
+        if lastAlertSignature == signature, let lastAlertAt,
+           now.timeIntervalSince(lastAlertAt) < duplicateAlertInterval {
+            return
+        }
+        lastAlertSignature = signature
+        lastAlertAt = now
+
         previewingSource = nil
         testingSource = nil
         activeHost = hostID
-        // 完成信号发在「这轮任务真正结束」时，所以收到即点亮。
-        // 颜色按宿主 App 优先：例如 Codex 在 VS Code 里跑，视觉上归到 VS Code 蓝。
         print("[ProNotch] Agent 完成提醒: source=\(source.rawValue), host=\(hostID), visual=\(visualSource.rawValue)")
         light(visualSource, mode: .alert)
     }
