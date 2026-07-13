@@ -3,9 +3,10 @@ import Foundation
 /// 把「完成提醒」接入 / 移出 Claude / Codex / VS Code。三者机制不同：
 /// - Claude Code：原生 Stop 钩子（`~/.claude/settings.json`），追加一条 `open pronotch://`。
 /// - Codex：完成事件只走 `config.toml` 的 `notify`（单程序）。我们装一个转发脚本——
-///   先 `open pronotch://` 点亮光晕，再把通知原样透传给原有的 `notify`（保留 computer-use
+///   先等待原有的 `notify` 跑完，再 `open pronotch://` 点亮光晕（保留 computer-use
 ///   等下游不被打断）。原 `notify` 以 base64 存进脚本头部，卸载时据此还原。
-/// - VS Code：提供独立的 `vscode-notify.sh` 完成提醒入口，供 VS Code 任务 / 扩展 / 脚本调用。
+/// - VS Code：提供独立的 `vscode-notify.sh` 完成提醒入口；传入命令时会先等待命令退出再提醒，
+///   或用 `--done` 在真正完成点显式提醒。裸调用不提醒，避免任务刚启动就误报完成。
 ///
 /// 安全策略：写前备份 `.pronotch.bak`；Claude 只动我们自己追加的那条、Codex 只动 `notify`
 /// 一行；全部可还原。
@@ -79,7 +80,7 @@ enum GlowHookInstaller {
     }
 
     /// hook 脚本格式版本：升级时 +1，启动迁移据此把旧脚本刷新到新格式
-    private static let scriptFormat = 4
+    private static let scriptFormat = 8
 
     /// 沿进程链向上找到「Agent 实际所在的 GUI App」bundle id。优先识别 VS Code / Cursor /
     /// Windsurf 这类编辑器宿主；终端 / IDE / 桌面 App 通用，找不到回空。
@@ -269,11 +270,56 @@ enum GlowHookInstaller {
         let script = """
         #!/bin/bash
         # ProNotch · VS Code 完成提醒（自动生成，勿手改）· PRONOTCH_FMT=\(scriptFormat)
+        # 用法：
+        #   vscode-notify.sh --done          # 当前调用点即视为已完成
+        #   vscode-notify.sh -- npm test     # 先等待命令退出，再提醒，并保留退出码
+        #   vscode-notify.sh --shell "npm test"  # 用 shell 执行一整段命令，完成后提醒
         \(hostDetectSnippet)
-        host=$(known_vscode_host)
+        status=0
+        should_notify=1
+        case "${1:-}" in
+          --done)
+            shift
+            if [ "$#" -gt 0 ]; then
+              echo "ProNotch: --done does not take a command; use '-- <command>' to wait." >&2
+              exit 64
+            fi
+            ;;
+          --shell)
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "ProNotch: --shell needs a command string." >&2
+              exit 64
+            fi
+            /bin/bash -lc "$*"
+            status=$?
+            ;;
+          --)
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "ProNotch: no command after --; skip VS Code completion reminder." >&2
+              exit 0
+            fi
+            "$@"
+            status=$?
+            ;;
+          "")
+            echo "ProNotch: no command passed; use '-- <command>' to wait, or '--done' at the real completion point." >&2
+            should_notify=0
+            ;;
+          *)
+            "$@"
+            status=$?
+            ;;
+        esac
+        if [ "$should_notify" != "1" ]; then
+          exit "$status"
+        fi
+        host=$(detect_host)
         url="pronotch://done?source=vscode"
         [ -n "$host" ] && url="$url&host=$host"
         open -g "$url"
+        exit "$status"
         """
         guard (try? script.write(toFile: vscodeScript, atomically: true, encoding: .utf8)) != nil else {
             return false
@@ -316,11 +362,20 @@ enum GlowHookInstaller {
 
         if on {
             if inChain {
-                // 已在 notify 链中。被 computer-use 等套在外层时，我们是「下游」，本就不该再向下转发；
                 // 直接指向时，previous 取脚本自己记录的原值。绝不把「含我们自己的当前链」抓来当 previous，
-                // 否则 exec 回自己 → 无限循环（这正是闪烁 bug 的根源）。脚本缺失或格式过期才重写。
+                // 否则调用回自己 → 无限循环（这正是闪烁 bug 的根源）。脚本缺失或格式过期才重写。
+                if !directlyOurs {
+                    // computer-use 等后装的 notify 可能把 ProNotch 塞进 --previous-notify，
+                    // 这会让光晕先亮、外层程序后收尾。迁移成 ProNotch 外层转发后，
+                    // 我们可以先等待外层 notify 跑完，再点亮。
+                    let migrated = notifyArrayRemovingForwarder(arr)
+                    guard migrated.parsed, writeForwarder(previous: migrated.previous) else { return false }
+                    backup(codexConfig)
+                    let newToml = upsertNotifyLine(toml, value: "[\"\(codexScript)\"]")
+                    return (try? newToml.write(toFile: codexConfig, atomically: true, encoding: .utf8)) != nil
+                }
                 if !fm.fileExists(atPath: codexScript) || !scriptIsCurrent(codexScript) {
-                    return writeForwarder(previous: directlyOurs ? readPreviousFromForwarder() : nil)
+                    return writeForwarder(previous: readPreviousFromForwarder())
                 }
                 return true
             }
@@ -387,7 +442,7 @@ enum GlowHookInstaller {
 
     // MARK: - 转发脚本生成 / 解析
 
-    /// 生成转发脚本：点亮光晕 + 透传 previous；原 notify 以 base64 存进脚本头供还原
+    /// 生成转发脚本：等待 previous 跑完 + 点亮光晕；原 notify 以 base64 存进脚本头供还原
     private static func writeForwarder(previous: String?) -> Bool {
         // 根部兜底防自引用死循环：previous 绝不能（间接）引用本脚本，否则 exec 回自己 → 无限循环。
         // 被 computer-use 套壳后原 notify 链里就含我们，这里统一剥掉，任何调用路径都断得了环。
@@ -397,41 +452,142 @@ enum GlowHookInstaller {
         try? fm.createDirectory(atPath: dir, withIntermediateDirectories: true)
 
         let prevB64 = previous?.data(using: .utf8)?.base64EncodedString() ?? ""
-        let execBlock = forwardExecBlock(previous: previous)
+        let forwardBlock = forwardRunBlock(previous: previous)
         let script = """
         #!/bin/bash
         # ProNotch · Codex 完成提醒转发器（自动生成，勿手改）· PRONOTCH_FMT=\(scriptFormat)
         # 还原：把 ~/.codex/config.toml 的 notify 改回下面 base64 的解码值，再删除本文件。
         # PRONOTCH_PREV_B64=\(prevB64)
         \(hostDetectSnippet)
+        find_transcript() {
+          local thread_id="$1" db path
+          case "$thread_id" in
+            ""|*[!0-9A-Fa-f-]*) return 1 ;;
+          esac
+
+          # Desktop / IDE 会把 thread-id 对应的 rollout 路径记在 state_*.sqlite。
+          # 遍历是为了兼容状态库将来升级版本号；找不到时再回退到 sessions 目录。
+          for db in "$HOME"/.codex/state_*.sqlite; do
+            [ -f "$db" ] || continue
+            path=$(/usr/bin/sqlite3 "$db" \
+              "SELECT rollout_path FROM threads WHERE id='$thread_id' LIMIT 1;" 2>/dev/null)
+            [ -f "$path" ] && { printf '%s' "$path"; return 0; }
+          done
+          path=$(/usr/bin/find "$HOME/.codex/sessions" -type f \
+            -name "*$thread_id*.jsonl" -print -quit 2>/dev/null)
+          [ -f "$path" ] && { printf '%s' "$path"; return 0; }
+          return 1
+        }
+
+        is_final_codex_answer() {
+          local thread_id transcript last_line attempt
+          thread_id=$(printf '%s' "$payload" | \
+            /usr/bin/plutil -extract thread-id raw -o - -- - 2>/dev/null)
+          transcript=$(find_transcript "$thread_id") || return 1
+
+          # notify 偶尔会比最后一行落盘略早，短暂重试后再判定。
+          # Codex Desktop/IDE 将过程更新标成 commentary，真正交付标成
+          # final_answer；只允许后者点亮，避免仍在思考或自动续跑时误报。
+          for attempt in 1 2 3 4 5; do
+            last_line=$(/usr/bin/grep -E \
+              '"type":"response_item".*"type":"message".*"role":"assistant"' \
+              "$transcript" 2>/dev/null | /usr/bin/tail -n 1)
+            case "$last_line" in
+              *'"phase":"final_answer"'*|*'"phase":"final"'*) return 0 ;;
+            esac
+            /bin/sleep 0.12
+          done
+          return 1
+        }
+
+        any_codex_turn_running() {
+          local db transcript last_task
+          for db in "$HOME"/.codex/state_*.sqlite; do
+            [ -f "$db" ] || continue
+            while IFS= read -r transcript; do
+              [ -f "$transcript" ] || continue
+              # rollout 是 JSONL；从文件末尾反查最近一次任务边界，避免扫描整份长会话。
+              last_task=$(/usr/bin/tail -r "$transcript" 2>/dev/null | \
+                /usr/bin/grep -m 1 -E \
+                '"type":"event_msg".*"type":"task_(started|complete)"')
+              case "$last_task" in
+                *'"type":"task_started"'*) return 0 ;;
+              esac
+            done < <(/usr/bin/sqlite3 "$db" \
+              "SELECT rollout_path FROM threads
+               WHERE updated_at_ms >= (strftime('%s','now') - 86400) * 1000;" \
+              2>/dev/null)
+          done
+          return 1
+        }
+
+        all_codex_turns_finished() {
+          local attempt
+          # 给当前 turn 的 task_complete 事件一点落盘时间；若另一个任务确实还在跑，
+          # 本次完成信号保持静默，最后结束的那个任务会再次触发 notify。
+          for attempt in 1 2 3 4 5; do
+            any_codex_turn_running || return 0
+            /bin/sleep 0.12
+          done
+          return 1
+        }
+
         payload="$1"
+        should_notify=0
         case "$payload" in
           *agent-turn-complete*)
             # 跳过 Codex Desktop 自动生成会话标题的内部任务——它在你刚发消息时就完成，会让光晕「一开始就亮」
             case "$payload" in
               *"Generate a concise UI title"*) : ;;
-              *)
-                host=$(detect_host)
-                url="pronotch://done?source=codex"
-                [ -n "$host" ] && url="$url&host=$host"
-                open -g "$url" ;;
+              *) should_notify=1 ;;
             esac ;;
         esac
-        \(execBlock)
+        \(forwardBlock)
+        if [ "$should_notify" = "1" ] && \
+           is_final_codex_answer && all_codex_turns_finished; then
+          host=$(detect_host)
+          url="pronotch://done?source=codex"
+          [ -n "$host" ] && url="$url&host=$host"
+          open -g "$url"
+        fi
         """
         guard (try? script.write(toFile: codexScript, atomically: true, encoding: .utf8)) != nil else { return false }
         try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: codexScript)
         return true
     }
 
-    /// 透传块：把原 notify 数组解析成 bash 参数 exec；无 previous 则空操作
-    private static func forwardExecBlock(previous: String?) -> String {
+    /// 透传块：把原 notify 数组解析成 bash 参数并等待返回；无 previous 则空操作
+    private static func forwardRunBlock(previous: String?) -> String {
         guard let previous, let elems = parseTomlStringArray(previous), !elems.isEmpty else {
             return "# 原本无 notify，到此结束"
         }
         let quoted = elems.map { "'" + $0.replacingOccurrences(of: "'", with: "'\\''") + "'" }
             .joined(separator: " ")
-        return "exec \(quoted) \"$payload\""
+        return "\(quoted) \"$payload\" || true"
+    }
+
+    /// 从当前 notify 链中去掉 ProNotch 自己，得到可安全保存为 previous 的原链。
+    private static func notifyArrayRemovingForwarder(_ notify: String?) -> (previous: String?, parsed: Bool) {
+        guard let notify, let elems = parseTomlStringArray(notify), !elems.isEmpty else {
+            return (nil, false)
+        }
+        var cleaned: [String] = []
+        var i = 0
+        while i < elems.count {
+            if i + 1 < elems.count,
+               elems[i] == "--previous-notify",
+               elems[i + 1].contains(codexScriptMarker) {
+                i += 2
+                continue
+            }
+            if elems[i].contains(codexScriptMarker) {
+                i += 1
+                continue
+            }
+            cleaned.append(elems[i])
+            i += 1
+        }
+        return (cleaned.isEmpty ? nil : tomlStringArray(cleaned), true)
     }
 
     /// 从脚本头 `# PRONOTCH_PREV_B64=` 取回原 notify 数组串
@@ -478,5 +634,17 @@ enum GlowHookInstaller {
             result.append(elem)
         }
         return result
+    }
+
+    private static func tomlStringArray(_ elems: [String]) -> String {
+        let quoted = elems.map { elem in
+            let escaped = elem
+                .replacingOccurrences(of: "\\", with: "\\\\")
+                .replacingOccurrences(of: "\"", with: "\\\"")
+                .replacingOccurrences(of: "\n", with: "\\n")
+                .replacingOccurrences(of: "\t", with: "\\t")
+            return "\"\(escaped)\""
+        }
+        return "[\(quoted.joined(separator: ", "))]"
     }
 }

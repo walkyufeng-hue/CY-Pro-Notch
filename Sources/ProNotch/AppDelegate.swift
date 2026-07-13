@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // 仅刷新已接入的，不改变接入与否，避免误开用户已取消的 Agent。
         GlowHookInstaller.migrateIfInstalled(.claude)
         GlowHookInstaller.migrateIfInstalled(.codex)
-        GlowHookInstaller.setInstalled(.vscode, true)
+        GlowHookInstaller.migrateIfInstalled(.vscode)
         // 清除早期 hooks.json 接入残留的「无 host」pronotch 孤儿（与接入与否无关，幂等）
         GlowHookInstaller.cleanCodexHooksOrphan()
 
